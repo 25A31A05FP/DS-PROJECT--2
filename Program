@@ -1,0 +1,325 @@
+#include <iostream>
+#include <fstream>
+using namespace std;
+
+class Account
+{
+    int accno;
+    char name[50];
+    float balance;
+
+public:
+    void create()
+    {
+        ifstream file("bank.dat", ios::binary);
+        Account a;
+        int lastNo = 1000;
+
+        if (file)
+        {
+            while (file.read((char*)&a, sizeof(a)))
+            {
+                lastNo = a.accno;
+            }
+            file.close();
+        }
+
+        accno = lastNo + 1;
+
+        cout << "Generated Account Number: " << accno << endl;
+
+        cin.ignore(1000, '\n');   // FIXED INPUT
+        cout << "Enter Name: ";
+        cin.getline(name, 50);
+
+        cout << "Enter Initial Balance: ";
+        cin >> balance;
+    }
+
+    void display()
+    {
+        cout << "\nAccount No: " << accno;
+        cout << "\nName: " << name;
+        cout << "\nBalance: " << balance << endl;
+    }
+
+    int getAccNo()
+    {
+        return accno;
+    }
+
+    void deposit(float amt)
+    {
+        balance += amt;
+    }
+
+    void withdraw(float amt)
+    {
+        if (amt <= balance)
+            balance -= amt;
+        else
+            cout << "Insufficient Balance\n";
+    }
+
+    void modify()
+    {
+        cin.ignore(1000, '\n');
+        cout << "Enter New Name: ";
+        cin.getline(name, 50);
+    }
+};
+
+// Create Account
+void newAccount()
+{
+    Account a;
+    ofstream file("bank.dat", ios::binary | ios::app);
+
+    if (!file)
+    {
+        cout << "File Error!\n";
+        return;
+    }
+
+    a.create();
+
+    file.write((char*)&a, sizeof(a));
+    file.flush();   // IMPORTANT
+
+    file.close();
+
+    cout << "Account Created Successfully\n";
+}
+
+// Display All
+void displayAll()
+{
+    Account a;
+    ifstream file("bank.dat", ios::binary);
+
+    if (!file)
+    {
+        cout << "No accounts found!\n";
+        return;
+    }
+
+    while (file.read((char*)&a, sizeof(a)))
+    {
+        a.display();
+    }
+
+    file.close();
+}
+
+// Balance Enquiry
+void balanceEnquiry(int no)
+{
+    Account a;
+    ifstream file("bank.dat", ios::binary);
+
+    if (!file)
+    {
+        cout << "No accounts found!\n";
+        return;
+    }
+
+    bool found = false;
+
+    while (file.read((char*)&a, sizeof(a)))
+    {
+        if (a.getAccNo() == no)
+        {
+            a.display();
+            found = true;
+            break;
+        }
+    }
+
+    file.close();
+
+    if (!found)
+        cout << "Account Not Found\n";
+}
+
+// Deposit / Withdraw
+void transaction(int no, int type)
+{
+    Account a;
+    fstream file("bank.dat", ios::binary | ios::in | ios::out);
+
+    if (!file)
+    {
+        cout << "No accounts found!\n";
+        return;
+    }
+
+    bool found = false;
+
+    while (file.read((char*)&a, sizeof(a)))
+    {
+        if (a.getAccNo() == no)
+        {
+            float amt;
+            cout << "Enter Amount: ";
+            cin >> amt;
+
+            if (type == 1)
+                a.deposit(amt);
+            else
+                a.withdraw(amt);
+
+            file.seekp(-sizeof(a), ios::cur);
+            file.write((char*)&a, sizeof(a));
+
+            cout << "Transaction Successful\n";
+            found = true;
+            break;
+        }
+    }
+
+    file.close();
+
+    if (!found)
+        cout << "Account Not Found\n";
+}
+
+// Delete Account
+void deleteAccount(int no)
+{
+    Account a;
+    ifstream file("bank.dat", ios::binary);
+
+    if (!file)
+    {
+        cout << "No accounts found!\n";
+        return;
+    }
+
+    ofstream temp("temp.dat", ios::binary);
+    bool found = false;
+
+    while (file.read((char*)&a, sizeof(a)))
+    {
+        if (a.getAccNo() != no)
+            temp.write((char*)&a, sizeof(a));
+        else
+            found = true;
+    }
+
+    file.close();
+    temp.close();
+
+    remove("bank.dat");
+    rename("temp.dat", "bank.dat");
+
+    if (found)
+        cout << "Account Deleted\n";
+    else
+        cout << "Account Not Found\n";
+}
+
+// Modify Account
+void modifyAccount(int no)
+{
+    Account a;
+    fstream file("bank.dat", ios::binary | ios::in | ios::out);
+
+    if (!file)
+    {
+        cout << "No accounts found!\n";
+        return;
+    }
+
+    bool found = false;
+
+    while (file.read((char*)&a, sizeof(a)))
+    {
+        if (a.getAccNo() == no)
+        {
+            a.modify();
+            file.seekp(-sizeof(a), ios::cur);
+            file.write((char*)&a, sizeof(a));
+
+            cout << "Account Modified\n";
+            found = true;
+            break;
+        }
+    }
+
+    file.close();
+
+    if (!found)
+        cout << "Account Not Found\n";
+}
+
+// Main
+int main()
+{
+    int choice, accno;
+
+    do
+    {
+        cout << "\n===== BANK MANAGEMENT SYSTEM =====\n";
+        cout << "1. New Account\n";
+        cout << "2. Deposit\n";
+        cout << "3. Withdraw\n";
+        cout << "4. Balance Enquiry\n";
+        cout << "5. All Accounts\n";
+        cout << "6. Delete Account\n";
+        cout << "7. Modify Account\n";
+        cout << "8. Exit\n";
+        cout << "Enter Choice: ";
+        cin >> choice;
+
+        switch (choice)
+        {
+        case 1:
+            newAccount();
+            break;
+
+        case 2:
+            cout << "Enter Account No: ";
+            cin >> accno;
+            transaction(accno, 1);
+            break;
+
+        case 3:
+            cout << "Enter Account No: ";
+            cin >> accno;
+            transaction(accno, 2);
+            break;
+
+        case 4:
+            cout << "Enter Account No: ";
+            cin >> accno;
+            balanceEnquiry(accno);
+            break;
+
+        case 5:
+            displayAll();
+            break;
+
+        case 6:
+            cout << "Enter Account No: ";
+            cin >> accno;
+            deleteAccount(accno);
+            break;
+
+        case 7:
+            cout << "Enter Account No: ";
+            cin >> accno;
+            modifyAccount(accno);
+            break;
+
+        case 8:
+            cout << "Thank You!\n";
+            break;
+
+        default:
+            cout << "Invalid Choice\n";
+        }
+
+    } while (choice != 8);
+
+    return 0;
+}
